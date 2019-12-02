@@ -400,7 +400,59 @@ function RC522.card_auth(auth_mode, block_address, key, uid)
     return error
 end
 
+function write_block(auth_mode, block_address, data)
+	isTagNear, cardType = RC522.request()
+    print("writing to block")
+    if (isTagNear == true) then
+      err, serialNo = RC522.anticoll()
+      print("Tag Found: "..appendHex(serialNo).."  of type: "..appendHex(cardType))
 
+      -- Selecting a tag, and the rest afterwards is only required if you want to read or write data to the card
+    
+      err, sak = RC522.select_tag(serialNo)
+      if (err == false) then
+		print("Tag selected successfully.  SAK: 0x"..string.format("%X", sak))
+		err = true
+		if auth_mode == auth_a then
+		  err = RC522.card_auth(auth_mode, block_address, keyA, serialNo)     --  Auth the "A" key.  if this fails you can also auth the "B" key
+		end
+		if auth_mode == auth_b then
+		  err = RC522.card_auth(auth_mode, block_address, keyB, serialNo)
+		end
+
+		  if err then 
+			print("ERROR Authenticating block "..block_address) 
+		  else
+			-- Write data to card
+			  err = RC522.writeTag(block_address, data)
+			  if err then print("ERROR Writing to the Tag") end
+
+			-- Read card data
+			  err, tagData = RC522.readTag(block_address)
+			  if not err then print("READ Block "..block_address..": "..appendHex(tagData)) end
+		  end
+
+      else
+        print("ERROR Selecting tag")
+    
+      end
+      print(" ")
+    
+      -- halt tag and get ready to read another.
+      buf = {}
+      buf[1] = 0x50  --MF1_HALT
+      buf[2] = 0
+      crc = RC522.calculate_crc(buf)
+      table.insert(buf, crc[1])
+      table.insert(buf, crc[2])
+      err, back_data, back_length = RC522.card_write(mode_transrec, buf)
+      RC522.clear_bitmask(0x08, 0x08)    -- Turn off encryption
+	else
+		print("no tag found");
+	end
+	
+	return "wrote to block"
+end
 
 ----------------------------------------------------------------------
 -- Main
@@ -428,7 +480,7 @@ end
 print("RC522 Firmware Version: 0x"..string.format("%X", RC522.getFirmwareVersion()))
 
 mtmr = tmr.create()
-mtmr:register(1000, tmr.ALARM_AUTO, function (t)
+mtmr:register(2000, tmr.ALARM_AUTO, function (t)
     isTagNear, cardType = RC522.request()
   
     if isTagNear == true then
@@ -441,29 +493,16 @@ mtmr:register(1000, tmr.ALARM_AUTO, function (t)
       err, sak = RC522.select_tag(serialNo)
       if err == false then
         print("Tag selected successfully.  SAK: 0x"..string.format("%X", sak))
-    
-    
-        for i = 0,63 do
-          err = RC522.card_auth(auth_a, i, keyA, serialNo)     --  Auth the "A" key.  if this fails you can also auth the "B" key
-          if err then 
-            print("ERROR Authenticating block "..i) 
-          else 
-    
-            -- Write data to card
-            if (i == 2) then   -- write to block 2
-              err = RC522.writeTag(i, { 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0xAA, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 })
-              if err then print("ERROR Writing to the Tag") end
-            end
-    
-            -- Read card data
-            if not (i % 4 == 3) then   --  Don't bother to read the Sector Trailers 
-              err, tagData = RC522.readTag(i)
-              if not err then print("READ Block "..i..": "..appendHex(tagData)) end
-            end
-          end
+		--i is block address
+		local block_addr = 2
+        err = RC522.card_auth(auth_a, block_addr, keyA, serialNo)     --  Auth the "A" key.  if this fails you can also auth the "B" key
+        if err then 
+          print("ERROR Authenticating block "..block_addr) 
+        else 
+          -- Read card data
+            err, tagData = RC522.readTag(block_addr)
+            if not err then print("READ Block "..block_addr..": "..appendHex(tagData)) end
         end
-    
-        
       else
         print("ERROR Selecting tag")
     
