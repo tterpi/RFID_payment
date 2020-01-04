@@ -1,7 +1,7 @@
 -- Startup after timer
 function startUp()
     print("Starting up...")
-    dofile('NFC_RC522.lua')
+    dofile('connectWifi.lua')
 end
 
 
