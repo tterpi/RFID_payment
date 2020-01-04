@@ -16,8 +16,9 @@ end
 print("WifiConnection")
 wifi.setmode(wifi.STATION)
 local station_cfg={}
-station_cfg.ssid="yourSSID"
-station_cfg.pwd="yourPWD"
+dofile('wifiCredentials.lua')
+station_cfg.ssid=wifiSsid
+station_cfg.pwd=wifiPwd
 station_cfg.save=false
 station_cfg.auto=false
 wifi.sta.config(station_cfg)
