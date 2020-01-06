@@ -7,6 +7,17 @@ host = "virtserver.swaggerhub.com"
 
 request = string.format("POST %s%s HTTP/1.1\r\nHost: %s\r\nConnection: keep-alive\r\nAccept: */*\r\n\r\n", path, params, host)
 
+http.post('http://'..host..path..params,
+  '',
+  '',
+  function(code, data)
+    if (code < 0) then
+      print("HTTP request failed")
+    else
+      print(code, data)
+    end
+  end)
+
 srv = net.createConnection(net.TCP, 0)
 srv:on("receive", function(sck, c) print("received: ") print(c) end)
 srv:on("dns", function(sck, c) print("dns: ") print(c) end)
@@ -18,4 +29,4 @@ srv:on("connection", function(sck, c)
   sck:send(request)
 end)
 print("trying to connect to server")
-srv:connect(80,host)
+--srv:connect(80,host)
