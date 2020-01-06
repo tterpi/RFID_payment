@@ -462,5 +462,3 @@ function blocksIdentical(blockA, blockB)
 	end
 	return true
 end
-
-dofile("main.lua")

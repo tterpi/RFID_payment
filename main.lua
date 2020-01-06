@@ -1,3 +1,10 @@
+function toUserIdString(t)
+  strT = ""
+  for i,v in ipairs(t) do
+    strT = strT..string.format("%X", t[i])
+  end
+  return strT
+end
 ----------------------------------------------------------------------
 -- Main
 ----------------------------------------------------------------------
@@ -42,25 +49,22 @@ mtmr:register(2000, tmr.ALARM_AUTO, function (t)
       err, sak = RC522.select_tag(serialNo)
       if err == false then
         print("Tag selected successfully.  SAK: 0x"..string.format("%X", sak))
-		local block_addr = 4
-		local keyB = { 0xAB, 0xCD, 0xEF, 0x12, 0x34, 0x56 }
+		    local block_addr = 4
+		    local keyB = { 0xAB, 0xCD, 0xEF, 0x12, 0x34, 0x56 }
         err = RC522.card_auth(auth_b, block_addr, keyB, serialNo)     --  Auth the "A" key.  if this fails you can also auth the "B" key
         if err then 
           print("ERROR Authenticating block "..block_addr) 
         else 
           -- Read card data
-            err, tagData = RC522.readTag(block_addr)
-            if not err then 
-				print("READ Block "..block_addr..": "..appendHex(tagData))
-				if blocksIdentical(tagData, authID) then
-					print("authorized");
-					-- led hi
-					gpio.write(pin_led, gpio.HIGH)
-					-- timer led lo
-					tmr.create():alarm(5000, tmr.ALARM_SINGLE, function() gpio.write(pin_led, gpio.LOW) end)
-				end
-			end
-        end
+          err, tagData = RC522.readTag(block_addr)
+          if not err then 
+            print("READ Block "..block_addr..": "..appendHex(tagData))
+            holdMachine(toUserIdString(tagData))
+            --send hold request to API
+            --if successful poll API for 5 minutes if machine was paid for
+            --if paid enable machine
+			  end
+      end
       else
         print("ERROR Selecting tag")
     
