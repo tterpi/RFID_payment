@@ -59,7 +59,7 @@ mtmr:register(2000, tmr.ALARM_AUTO, function (t)
           err, tagData = RC522.readTag(block_addr)
           if not err then 
             print("READ Block "..block_addr..": "..appendHex(tagData))
-            holdMachine(toUserIdString(tagData))
+            payMachine(toUserIdString(tagData))
             --send hold request to API
             --if successful poll API for 5 minutes if machine was paid for
             --if paid enable machine
