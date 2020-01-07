@@ -10,7 +10,7 @@ end
 ----------------------------------------------------------------------
 
 pin_led = 8
-authID = { 0xAB, 0xCD, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
+--authID = { 0xAB, 0xCD, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
 
 -- Initialise the RC522
 spi.setup(1, spi.MASTER, spi.CPOL_LOW, spi.CPHA_LOW, spi.DATABITS_8, 0)
@@ -38,9 +38,11 @@ print("RC522 Firmware Version: 0x"..string.format("%X", RC522.getFirmwareVersion
 mtmr = tmr.create()
 mtmr:register(2000, tmr.ALARM_AUTO, function (t)
     isTagNear, cardType = RC522.request()
-  
+    local readErr = true
+
     if isTagNear == true then
       mtmr:stop()
+      local serialNo
       err, serialNo = RC522.anticoll()
       print("Tag Found: "..appendHex(serialNo).."  of type: "..appendHex(cardType))
 
@@ -56,13 +58,9 @@ mtmr:register(2000, tmr.ALARM_AUTO, function (t)
           print("ERROR Authenticating block "..block_addr) 
         else 
           -- Read card data
-          err, tagData = RC522.readTag(block_addr)
-          if not err then 
+          readErr, tagData = RC522.readTag(block_addr)
+          if not readErr then 
             print("READ Block "..block_addr..": "..appendHex(tagData))
-            payMachine(toUserIdString(tagData))
-            --send hold request to API
-            --if successful poll API for 5 minutes if machine was paid for
-            --if paid enable machine
 			  end
       end
       else
@@ -80,6 +78,13 @@ mtmr:register(2000, tmr.ALARM_AUTO, function (t)
       table.insert(buf, crc[2])
       err, back_data, back_length = RC522.card_write(mode_transrec, buf)
       RC522.clear_bitmask(0x08, 0x08)    -- Turn off encryption
+
+      if not readErr then
+        payMachine(toUserIdString(tagData))
+        --send hold request to API
+        --if successful poll API for 5 minutes if machine was paid for
+        --if paid enable machine
+      end
       
      mtmr:start()
       

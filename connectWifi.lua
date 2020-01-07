@@ -6,9 +6,13 @@ function checkWiFiStatus()
   if s == 5 then
     myTimer:stop()
     print("Connected on " .. wifi.sta.getip())
-    dofile('NFC_RC522.lua')
+    print(collectgarbage("count")*1024)
     dofile('API.lua')
+    print(collectgarbage("count")*1024)
+    dofile('NFC_RC522.lua')
+    print(collectgarbage("count")*1024)
     dofile("main.lua")
+    print(collectgarbage("count")*1024)
   end
 end
 

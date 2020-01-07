@@ -1,14 +1,17 @@
 machineId = "1337"
 --userId = "H4CK3R"
 time = "2017-07-21T17:32:28Z"
-payMachinePath = string.format("/nfcproject/ASDFLaundryRoom/1.0.1/machine/%s/pay",machineId)
-host = "virtserver.swaggerhub.com"
+payMachinePath = string.format("/nfcproject/LaundryRoom/1.0.1/machine/%s/pay",machineId)
+host = "taking.pictures"
+tls.cert.verify(true)
 
 function payMachine(userId)
   local params = string.format("?userId=%s&machineId=%s&time=%s",userId, machineId, time)
   print("pay machine:")
-  http.post('http://'..host..payMachinePath..params,
-    '',
+  local url = "https://"..host.."/"
+  print(url)
+  collectgarbage("collect")
+  http.get(url,
     '',
     function(code, data)
       if (code < 0) then
