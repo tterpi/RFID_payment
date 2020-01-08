@@ -16,6 +16,20 @@ keyB = { 0xAB, 0xCD, 0xEF, 0x12, 0x34, 0x56 }
 
 This script also uses a test LED connected to D8 and GND.  
 
+Memory constraints made it neccessary to move some files to Lua-File-System to free up RAM. To load the image on the NodeMCU follow these steps. For more info see: https://nodemcu.readthedocs.io/en/master/getting-started/#upload-lfs-image
+
+Load the lfs-nfc.img-file to flash memory with esplorer.  
+Run `node.flashreload("lfs_nfc.img")` once from the console.  
+Make the scripts from the image available with `pcall(node.flashindex("_init"))` in your init.lua
+Now you can user the scripts from the img as usual.
+
+The following files are in the img and dont have to be loaded to the flash memory seperately:
+_init.lua
+dummy_strings.lua
+main.lua
+NFC_RC522.lua
+
+
 Project documentation in german:
 
 NFC-Projekt: RFID Bezahlsystem für öffentliche Waschmaschinen
@@ -40,13 +54,13 @@ Auf diese Weise kann verhindert werden, dass MIFARE-Chips ohne den geheimen Schl
 
 Als nächstes muss die ausgelese User-ID für die Authentifizierung und Authorisierung an den Server übermittelt werden. 
 Hierfür wird eine REST-Api verwendet, auf die gesichert mit HTTPS zugegriffen werden kann.
-Hierbei zeichnete sich eine Limitation des ESP8266 ab. Die Transport-Layer-Security-Implementierung (TLS) basierend auf mbedTLS, die für die NodeMCU-Firmware verfügbar ist, unterstützt
-lediglich TLS-Fragmente von 4KiB, in diesem muss bei der Server-Hello-Nachricht die Zertifikatkette des Servers enthalten sein. Bei längeren Zertifikatketten, wie sie
-im Internet häufig sind, kann keine Verbindung aufgebaut werden. Lediglich eine unverschlüsselte Verbindung ohne TLS ist in diesem Fall möglich.
+Hierbei zeichnete sich eine Limitation des ESP8266 ab. Die Transport-Layer-Security-Implementierung (TLS) basierend auf mbedTLS, die für die NodeMCU-Firmware verfügbar ist, unterstützt lediglich TLS-Fragmente von 4KiB, in diesem muss bei der Server-Hello-Nachricht die Zertifikatkette des Servers enthalten sein.
+Bei längeren Zertifikatketten, wie sie im Internet häufig sind, kann keine Verbindung aufgebaut werden. Lediglich eine unverschlüsselte Verbindung ohne TLS ist in diesem Fall möglich.
 Zudem wird Server-Name-Indication (SNI), welches zur Verbindung mit virtuellen Servern erforderlich sein kann, nicht unterstützt. 
 Deshalb wird in der NodeMCU-Dokumentation empfohlen, den Server für eine möglichst kurze Zertifikatkette und eine feste IP/Port-Kombination zu konfigurieren.
-Dies war jedoch für die verwendete Mock-API nicht möglich, weshalb vorläufig auf eine verschlüsselte Verbindung verzichtet wurde.
+Beim Versuch, den Code für den RC522 und den API-Request zu kombinieren, traten weitere Probleme auf. Auf dem ESP sind nach dem Start der Firmware etwas mehr als 40KiB RAM verfügbar. Laut der Dokumentation benötigt ein TLS-Handshake zwischen 25 und 30KiB RAM, ein Großteil des RAM muss also frei sein. Wenn der Code direkt als .lua ausgeführt wird, muss der gesamte Code im RAM liegen. Auch nachdem ungenutzer Code entfernt wurde, waren nur etwa 20KiB RAM frei. Zuerst wurde versucht den Lua-Code zu kompilieren, um Debuginformationen zu entfernen, was den RAM-Bedarf senken soll. Überraschender Weise hatte dies jedoch keine Auswirkungen auf den RAM-Bedarf, möglicher weise wurden hier Fehler gemacht.
+Der nächste Ansatzt, der schließlich zum Erfolg führte, war die Verwendung von Lua-File-System (LFS). Dies erlaubt es komilierte Skripte aus dem Flash-Speicher heraus auszuführen, was den RAM-Bedarf erheblich gesenkt hat. Mit der Verwendung von LFS sind nun 36KiB RAM frei und der TLS-Handshake kann erfolgreich durchgeführt werden.
 
 Der Skript auf dem ESP8266 arbeitet folgendermaßen: Zunächst wird eine WLAN-Verbindung aufgebaut. Hierfür müssen die Zugangsdaten auf dem ESP gespeichert sein. Wenn eine Verbindung aufgebaut werden konnte, wird der Skript mit den Funktionen für den RC522 geladen. Anschließend wird der Main-Skript ausgeführt, der die Geschäftslogik enthält. 
-Alle zwei Sekunden wird versucht, einen RFID-Chip zu lesen. Wenn einer gefunden wird und der Block 4 mit dem spezifizierten Key gelesen werden kann, wird ein Bezahl-Request an die API geschickt. Wenn der Request erfolgreicht ist, wird mit HTTP-Code 200 geantwortet. In diesem Fall soll das Relais geschaltet werden, das die Waschmaschine mit Strom versorgt. An dieser Stelle hat sich als Problem ergeben, dass das Relais mit einer Spannung von 5V arbeitet, der ESP an seinen Ausgängen aber maximal 3,3V bereitstellt.
+Alle zwei Sekunden wird versucht, einen RFID-Chip zu lesen. Wenn einer gefunden wird und der Block 4 mit dem spezifizierten Key gelesen werden kann, wird ein Bezahl-Request an die API geschickt. Wenn der Request erfolgreicht ist, wird mit HTTP-Code 200 geantwortet. In diesem Fall soll das Relais geschaltet werden, das die Waschmaschine mit Strom versorgt. An dieser Stelle hat sich als Problem ergeben, dass das Relais mit einer Spannung von 5V arbeitet, das NodeMCU-Devkit an seinen Ausgängen aber maximal 3,3V bereitstellt.
 Es muss auch ein Signal von der Waschmaschine empfangen werden, wenn diese ihr Programm beendet, damit das Relais wieder ausgeschaltet werden kann. Da verschiedene Programme unterschiedlich lange dauern und die Dauer zum Teil nicht zu Beginn feststeht, kann kein fester Timer verwendet werden.
