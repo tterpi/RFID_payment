@@ -1,31 +1,11 @@
 machineId = "1337"
 --userId = "H4CK3R"
-time = "2017-07-21T17:32:28Z"
+--time = "2017-07-21T17:32:28Z"
 payMachinePath = string.format("/nfcproject/LaundryRoom/1.0.1/machine/%s/pay",machineId)
-host = "taking.pictures"
-tls.cert.verify(true)
+host = "virtserver.swaggerhub.com"
+tls.cert.verify(false)
 
-function payMachine(userId)
-  local params = string.format("?userId=%s&machineId=%s&time=%s",userId, machineId, time)
-  print("pay machine:")
-  local url = "https://"..host.."/"
-  print(url)
-  collectgarbage("collect")
-  http.get(url,
-    '',
-    function(code, data)
-      if (code < 0) then
-        print("HTTP request failed")
-      elseif (code == 200) then
-        print("Paying machine successful")
-        print(code, data)
-              -- led hi
-              gpio.write(pin_led, gpio.HIGH)
-              -- timer led lo
-              tmr.create():alarm(5000, tmr.ALARM_SINGLE, function() gpio.write(pin_led, gpio.LOW) end)
-      else
-        print("Paying machine failed")
-        print(code, data)
+function blinkLED()
         local state = false
         local blinkCount = 0
         local tobj = tmr.create()
@@ -41,6 +21,31 @@ function payMachine(userId)
           end
           state = not state
         end)
+end
+
+function payMachine(userId)
+  local params = string.format("?userId=%s&machineId=%s",userId, machineId)
+  print("pay machine:")
+  local url = "http://"..host..payMachinePath..params
+  print(url)
+  --collectgarbage("collect")
+  http.post(url,
+    '',
+    '',
+    function(code, data)
+      if (code < 0) then
+        print("HTTP request failed")
+      elseif (code == 200) then
+        print("Paying machine successful")
+        print(code, data)
+              -- led hi
+              gpio.write(pin_led, gpio.HIGH)
+              -- timer led lo
+              tmr.create():alarm(5000, tmr.ALARM_SINGLE, function() gpio.write(pin_led, gpio.LOW) end)
+      else
+        print("Paying machine failed")
+        print(code, data)
+        blinkLED()
       end
     end)
 end

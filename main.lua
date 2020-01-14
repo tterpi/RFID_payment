@@ -51,8 +51,8 @@ mtmr:register(2000, tmr.ALARM_AUTO, function (t)
       err, sak = RC522.select_tag(serialNo)
       if err == false then
         print("Tag selected successfully.  SAK: 0x"..string.format("%X", sak))
-		    local block_addr = 4
-		    local keyB = { 0xAB, 0xCD, 0xEF, 0x12, 0x34, 0x56 }
+		local block_addr = 4
+		local keyB = { 0xAB, 0xCD, 0xEF, 0x12, 0x34, 0x56 }
         err = RC522.card_auth(auth_b, block_addr, keyB, serialNo)     --  Auth the "A" key.  if this fails you can also auth the "B" key
         if err then 
           print("ERROR Authenticating block "..block_addr) 
@@ -61,7 +61,7 @@ mtmr:register(2000, tmr.ALARM_AUTO, function (t)
           readErr, tagData = RC522.readTag(block_addr)
           if not readErr then 
             print("READ Block "..block_addr..": "..appendHex(tagData))
-			  end
+		  end
       end
       else
         print("ERROR Selecting tag")
@@ -84,6 +84,9 @@ mtmr:register(2000, tmr.ALARM_AUTO, function (t)
         --send hold request to API
         --if successful poll API for 5 minutes if machine was paid for
         --if paid enable machine
+      else
+        --blink
+        blinkLED()
       end
       
      mtmr:start()
