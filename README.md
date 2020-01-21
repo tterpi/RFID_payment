@@ -8,9 +8,9 @@ This script uses a test LED connected to D8 and GND.
 ### Setting up the card
 
 In order for this script to work with your Mifare card, you have to write the correct sector trailer for sector 1 (block 7) and also the correct key to block 4.
-The access bits in the sector trailer have the effect that you can only read and write when providing key B that is assumed to be secret. This applies to data blocks and key A and B. The necessary scripts can be found in the KeyBAuthentication branch.
+The access bits in the sector trailer have the effect that you can only read and write when providing key B that is assumed to be secret. This applies to data blocks and key A and B. The necessary scripts can be found in the writeCard folder, remove these scripts again when you want to use your NodeMCU devkit with the actual payment scripts.
 
-You can configure your card with the following calls, make shure to disable the main script first, by commenting out mtmr:start() at the end of the script.
+You can configure your card with the following calls:
 
 -- 1. Execute the following call to write the sector trailer:  
 =write_block(auth_a, 7, { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x0F, 0x00, 0xFF, 0xFF, 0xAB, 0xCD, 0xEF, 0x12, 0x34, 0x56 })  
@@ -18,20 +18,81 @@ You can configure your card with the following calls, make shure to disable the 
 keyB = { 0xAB, 0xCD, 0xEF, 0x12, 0x34, 0x56 }  
 =write_block(auth_b, 4, { 0xAB, 0xCD, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 })
 
+### Firmware
+
+Memory constraints made it neccessary to move some files to Lua-File-System to free up RAM. You will need a firmware with LFS support. You can find the firmware I used in the firmware folder. 
+I used the integer build, I did not test the float build.
+
+I used a firmware build with the following modules and settings for LFS:
+
+NodeMCU 3.0.0.0 built on nodemcu-build.com provided by frightanic.com
+	branch: master
+	commit: 71a182caa7841cbb478ed90ede526dc881943c80
+	release: 
+	release DTS: 202001061321
+	SSL: true
+	build type: integer
+	LFS: 0x15000
+	modules: bit,file,gpio,http,net,node,spi,tmr,uart,wifi,tls
+	
+I believe I used the following LFS settings:  
+
+LFS size: 96KB  
+SPIFFS base (fixed location): 1024KB  
+SPIFFS size: all free flash  
+
 ### Lua File System usage
 
-Memory constraints made it neccessary to move some files to Lua-File-System to free up RAM. You will need a firmware with LFS support. To load the image on the NodeMCU-devkit follow these steps. For more info see: https://nodemcu.readthedocs.io/en/master/getting-started/#upload-lfs-image
+To load the LFS image on the NodeMCU-devkit follow these steps. The files in the lfsScripts folder are contained in the image. For more info see: https://nodemcu.readthedocs.io/en/master/getting-started/#upload-lfs-image
 
 1. Load the lfs-nfc.img-file to flash memory with esplorer.  
-2. Run `node.flashreload("lfs_nfc.img")` once from the console.  
-3. Make the scripts from the image available with `pcall(node.flashindex("_init"))` in your init.lua
+2. Run `node.flashreload("lfs_nfc.img")` once from the console.
+3. Make the scripts from the image available with `pcall(node.flashindex("_init"))` in your init.lua (this was already done in the current init.lua)
 4. Now you can use the scripts from the img as usual.
 
-The following files are in the img and dont have to be loaded to the flash memory seperately:
-_init.lua
-dummy_strings.lua
-main.lua
-NFC_RC522.lua
+Also load the following files to the flash memory:
+
+init.lua  
+connectWifi.lua  
+API.lua
+
+### Set up TLS certificate
+
+To set the certificate for the TLS handshake execute the following call once from the console:
+
+`tls.cert.verify([[
+-----BEGIN CERTIFICATE-----
+MIIDujCCAqKgAwIBAgILBAAAAAABD4Ym5g0wDQYJKoZIhvcNAQEFBQAwTDEgMB4G
+A1UECxMXR2xvYmFsU2lnbiBSb290IENBIC0gUjIxEzARBgNVBAoTCkdsb2JhbFNp
+Z24xEzARBgNVBAMTCkdsb2JhbFNpZ24wHhcNMDYxMjE1MDgwMDAwWhcNMjExMjE1
+MDgwMDAwWjBMMSAwHgYDVQQLExdHbG9iYWxTaWduIFJvb3QgQ0EgLSBSMjETMBEG
+A1UEChMKR2xvYmFsU2lnbjETMBEGA1UEAxMKR2xvYmFsU2lnbjCCASIwDQYJKoZI
+hvcNAQEBBQADggEPADCCAQoCggEBAKbPJA6+Lm8omUVCxKs+IVSbC9N/hHD6ErPL
+v4dfxn+G07IwXNb9rfF73OX4YJYJkhD10FPe+3t+c4isUoh7SqbKSaZeqKeMWhG8
+eoLrvozps6yWJQeXSpkqBy+0Hne/ig+1AnwblrjFuTosvNYSuetZfeLQBoZfXklq
+tTleiDTsvHgMCJiEbKjNS7SgfQx5TfC4LcshytVsW33hoCmEofnTlEnLJGKRILzd
+C9XZzPnqJworc5HGnRusyMvo4KD0L5CLTfuwNhv2GXqF4G3yYROIXJ/gkwpRl4pa
+zq+r1feqCapgvdzZX99yqWATXgAByUr6P6TqBwMhAo6CygPCm48CAwEAAaOBnDCB
+mTAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUm+IH
+V2ccHsBqBt5ZtJot39wZhi4wNgYDVR0fBC8wLTAroCmgJ4YlaHR0cDovL2NybC5n
+bG9iYWxzaWduLm5ldC9yb290LXIyLmNybDAfBgNVHSMEGDAWgBSb4gdXZxwewGoG
+3lm0mi3f3BmGLjANBgkqhkiG9w0BAQUFAAOCAQEAmYFThxxol4aR7OBKuEQLq4Gs
+J0/WwbgcQ3izDJr86iw8bmEbTUsp9Z8FHSbBuOmDAGJFtqkIk7mpM0sYmsL4h4hO
+291xNBrBVNpGP+DTKqttVCL1OmLNIG+6KYnX3ZHu01yiPqFbQfXf5WRDLenVOavS
+ot+3i9DAgBkcRcAtjOj4LaR0VknFBbVPFd5uRHg5h6h+u/N5GJG79G+dwfCMNYxd
+AfvDbbnvRG15RjF+Cv6pgsH/76tuIMRQyV+dTZsXjAzlAcmgQWpzU/qlULRuJQ/7
+TBj0/VLZjmmx6BEP3ojY+x1J96relc8geMJgEtslQIxq/H5COEBkEveegeGTLg==
+-----END CERTIFICATE-----
+]])`
+
+This is a let's encrypt CA certificate. Replace with whatever you need for your API.
+
+### Set up wifi credentials
+
+Create a file called wifiCredentials.lua with the following content, add your personal credentials of course:
+
+`wifiSsid="YourSSID"  
+wifiPwd="YourPassword"`
 
 ### Project documentation in German
 
