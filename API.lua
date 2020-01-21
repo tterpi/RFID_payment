@@ -3,7 +3,7 @@ machineId = "1337"
 --time = "2017-07-21T17:32:28Z"
 payMachinePath = string.format("/nfcproject/LaundryRoom/1.0.1/machine/%s/pay",machineId)
 host = "virtserver.swaggerhub.com"
-tls.cert.verify(false)
+tls.cert.verify(true)
 
 function blinkLED()
         local state = false
@@ -26,7 +26,7 @@ end
 function payMachine(userId)
   local params = string.format("?userId=%s&machineId=%s",userId, machineId)
   print("pay machine:")
-  local url = "http://"..host..payMachinePath..params
+  local url = "https://"..host..payMachinePath..params
   print(url)
   --collectgarbage("collect")
   http.post(url,
